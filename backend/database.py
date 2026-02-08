@@ -7,6 +7,12 @@ import os
 
 SQLALCHEMY_DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite:///./sql_app.db")
 
+# Fix for newer SQLAlchemy versions requiring 'postgresql+psycopg2'
+if SQLALCHEMY_DATABASE_URL.startswith("postgres://"):
+    SQLALCHEMY_DATABASE_URL = SQLALCHEMY_DATABASE_URL.replace("postgres://", "postgresql+psycopg2://", 1)
+elif SQLALCHEMY_DATABASE_URL.startswith("postgresql://"):
+    SQLALCHEMY_DATABASE_URL = SQLALCHEMY_DATABASE_URL.replace("postgresql://", "postgresql+psycopg2://", 1)
+
 # If using PostgreSQL (common for deployment), remove check_same_thread
 if SQLALCHEMY_DATABASE_URL.startswith("sqlite"):
     engine = create_engine(
