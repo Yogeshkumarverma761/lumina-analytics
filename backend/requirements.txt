@@ -1,0 +1,12 @@
+kagglehub
+pandas
+scikit-learn
+fastapi
+uvicorn
+joblib
+numpy
+python-multipart
+google-auth
+python-jose[cryptography]
+bcrypt
+sqlalchemy
