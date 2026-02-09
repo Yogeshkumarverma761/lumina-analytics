@@ -184,10 +184,15 @@ async def predict(
                     encoded_value = 0
                 features.append(encoded_value)
             else:
-                # Handle size string (strip 'sqft' if present)
+                # Handle size string (strip 'sqft' and handle ranges)
                 if feature_name == 'size' and isinstance(value, str):
                     try:
-                        value = float(value.replace('sqft', '').strip())
+                        clean_val = value.lower().replace('sqft', '').strip()
+                        if '-' in clean_val:
+                            parts = clean_val.split('-')
+                            value = (float(parts[0].strip()) + float(parts[1].strip())) / 2
+                        else:
+                            value = float(clean_val)
                     except:
                         value = 0
                 features.append(value)

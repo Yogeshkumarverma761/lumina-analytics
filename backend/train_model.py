@@ -32,12 +32,36 @@ def preprocess_data(df):
     # Make a copy
     df = df.copy()
     
-    # Identify target column (assuming it's 'price' or similar)
-    # We'll need to check the actual column names
-    print("\nAll columns:", df.columns.tolist())
+    # Drop irrelevant columns
+    cols_to_drop = ['url', 'date']
+    df = df.drop(columns=[c for c in cols_to_drop if c in df.columns])
     
-    # Drop rows with missing target values
-    # Assuming 'price' is the target - we'll adjust after seeing the data
+    print("\nColumns after dropping irrelevant ones:", df.columns.tolist())
+    
+    # Process 'size' column before encoding
+    def parse_size(size_str):
+        if not isinstance(size_str, str):
+            return 0
+        try:
+            # Remove 'sqft' and whitespace
+            size_str = size_str.lower().replace('sqft', '').strip()
+            if not size_str:
+                return 0
+            # Handle ranges (e.g., "799-1258")
+            if '-' in size_str:
+                parts = size_str.split('-')
+                val1 = float(parts[0].strip())
+                val2 = float(parts[1].strip())
+                return (val1 + val2) / 2
+            return float(size_str)
+        except:
+            return 0
+
+    if 'size' in df.columns:
+        print("Parsing 'size' column to numerical...")
+        df['size'] = df['size'].apply(parse_size)
+    
+    # Identify target column
     target_col = None
     for col in df.columns:
         if 'price' in col.lower():
@@ -48,10 +72,23 @@ def preprocess_data(df):
         print("Warning: Could not find price column. Using last column as target.")
         target_col = df.columns[-1]
     
-    print(f"\nUsing '{target_col}' as target column")
+    print(f"Using '{target_col}' as target column")
     
-    # Drop rows with missing target
-    df = df.dropna(subset=[target_col])
+    # Data Cleaning: Fix the dataset by removing invalid rows
+    initial_count = len(df)
+    
+    # 1. Remove rows where price is 0 or too low (less than 1 Lakh)
+    df = df[df[target_col] >= 100000]
+    
+    # 2. Remove rows where size is 0
+    if 'size' in df.columns:
+        df = df[df['size'] > 0]
+        
+    # 3. Handle outliers for price (remove top 5% extreme values)
+    q_high = df[target_col].quantile(0.95)
+    df = df[df[target_col] <= q_high]
+    
+    print(f"Data Cleaning: Removed {initial_count - len(df)} invalid/outlier rows. Remaining: {len(df)}")
     
     # Separate features and target
     X = df.drop(columns=[target_col])
@@ -61,17 +98,19 @@ def preprocess_data(df):
     # For numeric columns, fill with median
     numeric_cols = X.select_dtypes(include=[np.number]).columns
     for col in numeric_cols:
-        X[col].fillna(X[col].median(), inplace=True)
+        X[col] = X[col].fillna(X[col].median())
     
     # For categorical columns, fill with mode
     categorical_cols = X.select_dtypes(include=['object']).columns
     for col in categorical_cols:
-        X[col].fillna(X[col].mode()[0] if not X[col].mode().empty else 'Unknown', inplace=True)
+        mode_val = X[col].mode()
+        X[col] = X[col].fillna(mode_val[0] if not mode_val.empty else 'Unknown')
     
     # Encode categorical variables
     label_encoders = {}
     for col in categorical_cols:
         le = LabelEncoder()
+        # Ensure we handle unseen categories later by using a small trick or just mapping everything to string
         X[col] = le.fit_transform(X[col].astype(str))
         label_encoders[col] = le
     
