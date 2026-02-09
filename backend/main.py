@@ -79,7 +79,7 @@ class PredictionRequest(BaseModel):
 class GoogleLoginRequest(BaseModel):
     credential: str
 
-GOOGLE_CLIENT_ID = "YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com" # User will replace this
+GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", "YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com")
 
 class PredictionResponse(BaseModel):
     predicted_price: float
