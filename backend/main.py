@@ -18,22 +18,31 @@ from auth import verify_password, get_password_hash, create_access_token, SECRET
 app = FastAPI(title="Land Price Prediction API with Auth")
 
 # CORS middleware
-raw_origins = os.environ.get("ALLOWED_ORIGINS", "*")
-if raw_origins == "*":
-    origins = ["*"]
-    allow_all_origins = True
-else:
-    # Clean origins: strip spaces and trailing slashes
-    origins = [o.strip().rstrip('/') for o in raw_origins.split(",") if o.strip()]
-    allow_all_origins = False
+# We use a custom configuration that is more permissive for these deployment scenarios
+# identifying if we are in a "permissive" mode (like dev or preview deployments)
+ALLOW_ALL = os.environ.get("ALLOWED_ORIGINS", "*") == "*"
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=origins,
-    allow_credentials=not allow_all_origins, # Credentials must be False if origins is ["*"]
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+if ALLOW_ALL:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_credentials=False, # Credentials cannot be true with "*"
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+else:
+    # If specific origins are set, we use them. 
+    # But we also add a regex pattern to allow all Vercel and Render preview URLs automatically
+    origins = [o.strip().rstrip('/') for o in os.environ.get("ALLOWED_ORIGINS", "").split(",") if o.strip()]
+    
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=origins,
+        allow_origin_regex=r"https://.*\.vercel\.app|https://.*\.onrender\.com", # Allow all vercel/render subdomains
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
 # Database Dependency
 def get_db():
