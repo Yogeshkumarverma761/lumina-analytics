@@ -93,9 +93,10 @@ class HistoryResponse(BaseModel):
     timestamp: str
 
 # --- MODEL LOADING ---
-MODEL_PATH = "models/model.pkl"
-ENCODERS_PATH = "models/label_encoders.pkl"
-METADATA_PATH = "models/metadata.pkl"
+base_dir = os.path.dirname(os.path.abspath(__file__))
+MODEL_PATH = os.path.join(base_dir, "models", "model.pkl")
+ENCODERS_PATH = os.path.join(base_dir, "models", "label_encoders.pkl")
+METADATA_PATH = os.path.join(base_dir, "models", "metadata.pkl")
 
 model = None
 label_encoders = None
@@ -104,8 +105,8 @@ feature_names = None
 @app.on_event("startup")
 async def startup_event():
     global model, label_encoders, feature_names
-    init_db() # Initialize DB tables
     try:
+        init_db() # Initialize DB tables
         model = joblib.load(MODEL_PATH)
         label_encoders = joblib.load(ENCODERS_PATH)
         metadata = joblib.load(METADATA_PATH)
@@ -113,6 +114,8 @@ async def startup_event():
         print("Backend: Model and Database initialized.")
     except Exception as e:
         print(f"Startup error: {e}")
+        # We don't want to crash the whole app here, so we log it
+
 
 # --- AUTH ENDPOINTS ---
 @app.post("/register")
