@@ -18,11 +18,19 @@ from auth import verify_password, get_password_hash, create_access_token, SECRET
 app = FastAPI(title="Land Price Prediction API with Auth")
 
 # CORS middleware
-origins = os.environ.get("ALLOWED_ORIGINS", "*").split(",")
+raw_origins = os.environ.get("ALLOWED_ORIGINS", "*")
+if raw_origins == "*":
+    origins = ["*"]
+    allow_all_origins = True
+else:
+    # Clean origins: strip spaces and trailing slashes
+    origins = [o.strip().rstrip('/') for o in raw_origins.split(",") if o.strip()]
+    allow_all_origins = False
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
-    allow_credentials=True,
+    allow_credentials=not allow_all_origins, # Credentials must be False if origins is ["*"]
     allow_methods=["*"],
     allow_headers=["*"],
 )
